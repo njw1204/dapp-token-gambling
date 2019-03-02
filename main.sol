@@ -110,7 +110,7 @@ contract GameMedal is ERC621BaseToken, usingOraclize, Util, Custom {
 
         // game.param1 : betTokens, game.param2 : betType
         RandomQuery memory game = RandomQuery(
-            QueryType.TOKEN_GAME_ODDEVEN, msg.sender, 1, 100, block.number,
+            QueryType.TOKEN_GAME_ODDEVEN, msg.sender, block.number, 1, 100,
             betTokens, uint256(betOnOdd ? BetType.BET_ODD : BetType.BET_EVEN)
         );
 
