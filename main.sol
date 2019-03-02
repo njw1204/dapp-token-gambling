@@ -15,6 +15,7 @@ contract Custom {
     uint256 internal constant donateForTokenRatio = 0.01 ether;
 
     bool public freeMode = false;
+    uint256 internal maxBetTokens = 1000000;
     bool internal enableFixedBonusDonate = true;
     bool internal enableRandomBonusDonate = true;
     uint256 internal oraclizeGasPrice = 1000000000; // 1 gwei
@@ -26,7 +27,11 @@ contract GameMedal is ERC621BaseToken, usingOraclize, Util, Custom {
     using SafeMath for uint256;
 
     enum QueryType {
-        DONATE_BONUS, TOKEN_BET
+        DONATE_BONUS, TOKEN_GAME_ODDEVEN
+    }
+
+    enum BetType {
+        BET_EVEN, BET_ODD
     }
 
     struct RandomQuery {
@@ -41,10 +46,12 @@ contract GameMedal is ERC621BaseToken, usingOraclize, Util, Custom {
 
     mapping (bytes32 => RandomQuery) QQ;
 
+    event StartOddEvenGame(address indexed from, uint256 tokens, bool betOnOdd);
+    event OddEvenGameResult(address indexed user, uint256 minBound, uint256 maxBound, uint256 diceResult, uint256 reward);
     event Donate(address indexed from, uint256 value);
     event DonateForRandomBonusToken(address indexed from, uint256 value);
     event DonateForFixedBonusToken(address indexed from, uint256 value);
-    event DonateBonusResult(address indexed user, uint256 minBound, uint256 maxBound, uint256 resultValue);
+    event DonateBonusResult(address indexed user, uint256 minBound, uint256 maxBound, uint256 diceResult);
     event LogNewOraclizeQuery(bytes32 indexed queryId, uint256 queryPrice, string description);
     event LogOraclizeCallback(bytes32 indexed queryId, string result);
 
@@ -79,9 +86,40 @@ contract GameMedal is ERC621BaseToken, usingOraclize, Util, Custom {
             emit DonateBonusResult(query.who, query.minBound, query.maxBound, diceResult);
             _increaseSupply(diceResult, query.who);
         }
+        else if (query.typ == QueryType.TOKEN_GAME_ODDEVEN) {
+            // query for oddeven token gambling
+            // query.param1 : betTokens, query.param2 : betType
+            bool win = (diceResult.mod(2) == 1);
+            if (query.param2 == uint256(BetType.BET_EVEN)) win = !win;
+
+            uint256 reward = (win ? query.param1.mul(2) : 0);
+            emit OddEvenGameResult(query.who, query.minBound, query.maxBound, diceResult, reward);
+            if (win) _increaseSupply(reward, query.who);
+        }
         else {
             revert();
         }
+    }
+
+    function startOddEvenGame(uint256 betTokens, bool betOnOdd) external {
+        // simple token gambling (Odd or Even)
+        uint256 price = oraclize_getPrice("random", oraclizeGasLimit);
+        require(address(this).balance >= price);
+        require(betTokens <= maxBetTokens && _totalSupply.add(betTokens) <= UINT250_MAX);
+        _decreaseSupply(betTokens, msg.sender);
+
+        // game.param1 : betTokens, game.param2 : betType
+        RandomQuery memory game = RandomQuery(
+            QueryType.TOKEN_GAME_ODDEVEN, msg.sender, 1, 100, block.number,
+            betTokens, uint256(betOnOdd ? BetType.BET_ODD : BetType.BET_EVEN)
+        );
+
+        // callback process, params : delay, randomBytes, gasLimit
+        bytes32 queryId = oraclize_newRandomDSQuery(0, 32, oraclizeGasLimit);
+        QQ[queryId] = game;
+
+        emit StartOddEvenGame(msg.sender, betTokens, betOnOdd);
+        emit LogNewOraclizeQuery(queryId, price, "oraclize_newRandomDSQuery");
     }
 
     function donateForFixedBonusToken() external payable {
@@ -144,6 +182,10 @@ contract GameMedal is ERC621BaseToken, usingOraclize, Util, Custom {
     function setFreeMode(bool free) external onlyOwner {
         // when freeMode you can call giveMeFreeToken() and get tokens
         freeMode = free;
+    }
+
+    function setMaxBetTokens(uint256 tokens) external onlyOwner {
+        maxBetTokens = tokens;
     }
 
     function setEnableFixedBonusDonate(bool enable) external onlyOwner {
