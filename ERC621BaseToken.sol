@@ -1,6 +1,8 @@
+/// @author njw1204
+
 pragma solidity ^0.5.0;
-import "lib/SafeMath.sol";
-import "lib/Ownable.sol";
+import "./lib/SafeMath.sol";
+import "./lib/Ownable.sol";
 
 
 contract ERC20Interface {
