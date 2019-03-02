@@ -1,3 +1,5 @@
+// This code is from https://github.com/OpenZeppelin/openzeppelin-solidity
+
 pragma solidity ^0.5.0;
 
 /**
@@ -6,7 +8,7 @@ pragma solidity ^0.5.0;
  * functions, this simplifies the implementation of "user permissions".
  */
 contract Ownable {
-    address private _owner;
+    address internal _owner;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
