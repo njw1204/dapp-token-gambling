@@ -7,17 +7,17 @@ import "./lib/oraclizeAPI_0.5.sol";
 
 
 contract Custom {
-    string public constant tokenName = "Game Medal";
-    string public constant tokenSymbol = "MEDAL";
-    uint8 public constant tokenDecimals = 0;
-    uint256 internal constant initTokens = 10000;
-    uint256 internal constant donateForTokenMinBound = 0.1 ether;
-    uint256 internal constant donateForTokenRatio = 0.01 ether;
+    string internal constant tokenName = "Game Medal";
+    string internal constant tokenSymbol = "MEDAL";
+    uint8 internal constant tokenDecimals = 0;
+    uint256 public constant initTokens = 10000;
+    uint256 public constant donateForTokenMinBound = 0.1 ether;
+    uint256 public constant donateForTokenRatio = 0.01 ether;
 
     bool public freeMode = false;
-    uint256 internal maxBetTokens = 1000000;
-    bool internal enableFixedBonusDonate = true;
-    bool internal enableRandomBonusDonate = true;
+    uint256 public maxBetTokens = 1000000;
+    bool public enableFixedBonusDonate = true;
+    bool public enableRandomBonusDonate = true;
     uint256 internal oraclizeGasPrice = 1000000000; // 1 gwei
     uint256 internal oraclizeGasLimit = 150000;
 }
