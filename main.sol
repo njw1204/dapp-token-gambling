@@ -10,15 +10,16 @@ contract Custom {
     string internal constant tokenName = "Game Medal";
     string internal constant tokenSymbol = "MEDAL";
     uint8 internal constant tokenDecimals = 0;
-    uint256 public constant initTokens = 10000;
+    uint256 public constant initTokens = 1_000_000;
     uint256 public constant donateForTokenMinBound = 0.1 ether;
-    uint256 public constant donateForTokenRatio = 0.01 ether;
+    uint256 public constant donateForTokenRatio = 0.00001 ether;
 
     bool public freeMode = false;
-    uint256 public maxBetTokens = 1000000;
+    uint256 public minBetTokens = 10000;
+    uint256 public maxBetTokens = 100_000_000;
     bool public enableFixedBonusDonate = true;
     bool public enableRandomBonusDonate = true;
-    uint256 internal oraclizeGasPrice = 1000000000; // 1 gwei
+    uint256 internal oraclizeGasPrice = 1_000_000_000; // 1 gwei
     uint256 internal oraclizeGasLimit = 150000;
 }
 
@@ -105,7 +106,7 @@ contract GameMedal is ERC621BaseToken, usingOraclize, Util, Custom {
         // simple token gambling (Odd or Even)
         uint256 price = oraclize_getPrice("random", oraclizeGasLimit);
         require(address(this).balance >= price);
-        require(betTokens <= maxBetTokens && _totalSupply.add(betTokens) <= UINT250_MAX);
+        require(betTokens >= minBetTokens && betTokens <= maxBetTokens && _totalSupply.add(betTokens) <= UINT250_MAX);
         _decreaseSupply(betTokens, msg.sender);
 
         // game.param1 : betTokens, game.param2 : betType
