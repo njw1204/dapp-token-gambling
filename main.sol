@@ -17,6 +17,7 @@ contract Custom {
     bool public freeMode = false;
     uint256 public minBetTokens = 10000;
     uint256 public maxBetTokens = 100_000_000;
+    bool public enableOddEvenGame = true;
     bool public enableFixedBonusDonate = true;
     bool public enableRandomBonusDonate = true;
     uint256 internal oraclizeGasPrice = 1_000_000_000; // 1 gwei
@@ -102,13 +103,15 @@ contract GameMedal is ERC621BaseToken, usingOraclize, Util, Custom {
         }
     }
 
-    function startOddEvenGame(uint256 betTokens, bool betOnOdd) external {
+    function startOddEvenGame(uint256 betTokens, bool betOnOdd) external payable {
         // simple token gambling (Odd or Even)
-        uint256 price = oraclize_getPrice("random", oraclizeGasLimit);
-        require(address(this).balance >= price);
+        require(enableOddEvenGame);
         require(betTokens >= minBetTokens && betTokens <= maxBetTokens && _totalSupply.add(betTokens) <= UINT250_MAX);
-        _decreaseSupply(betTokens, msg.sender);
 
+        uint256 price = getRandomQueryPrice();
+        require(msg.value >= price);
+
+        _decreaseSupply(betTokens, msg.sender);
         // game.param1 : betTokens, game.param2 : betType
         RandomQuery memory game = RandomQuery(
             QueryType.TOKEN_GAME_ODDEVEN, msg.sender, block.number, 1, 100,
@@ -126,6 +129,7 @@ contract GameMedal is ERC621BaseToken, usingOraclize, Util, Custom {
     function donateForFixedBonusToken() external payable {
         // thanks for donate, and get fixed bonus
         require(enableFixedBonusDonate && msg.value >= donateForTokenMinBound);
+
         uint256 bound = msg.value.div(donateForTokenRatio);
         // prevent too much supply
         require(_totalSupply.add(bound) <= UINT250_MAX);
@@ -139,8 +143,8 @@ contract GameMedal is ERC621BaseToken, usingOraclize, Util, Custom {
         // thanks for donate, and get random bonus
         require(enableRandomBonusDonate && msg.value >= donateForTokenMinBound);
 
-        uint256 price = oraclize_getPrice("random", oraclizeGasLimit);
-        require(address(this).balance >= price);
+        uint256 price = getRandomQueryPrice();
+        require(msg.value >= price);
 
         RandomQuery memory bonus = RandomQuery(
             QueryType.DONATE_BONUS, msg.sender, block.number,
@@ -180,13 +184,27 @@ contract GameMedal is ERC621BaseToken, usingOraclize, Util, Custom {
         msg.sender.transfer(address(this).balance);
     }
 
+    function getRandomQueryPrice() public view returns (uint256) {
+        return oraclize.getPrice("random", oraclizeGasLimit);
+    }
+
     function setFreeMode(bool free) external onlyOwner {
         // when freeMode you can call giveMeFreeToken() and get tokens
         freeMode = free;
     }
 
+    function setMinBetTokens(uint256 tokens) external onlyOwner {
+        minBetTokens = tokens;
+        require(minBetTokens <= maxBetTokens);
+    }
+
     function setMaxBetTokens(uint256 tokens) external onlyOwner {
         maxBetTokens = tokens;
+        require(minBetTokens <= maxBetTokens);
+    }
+
+    function setEnableOddEvenGame(bool enable) external onlyOwner {
+        enableOddEvenGame = enable;
     }
 
     function setEnableFixedBonusDonate(bool enable) external onlyOwner {
@@ -198,6 +216,7 @@ contract GameMedal is ERC621BaseToken, usingOraclize, Util, Custom {
     }
 
     function setOraclizeGasPrice(uint256 gasPrice) external onlyOwner {
+        require(gasPrice >= 1_000_000_000);
         oraclizeGasPrice = gasPrice;
     }
 
